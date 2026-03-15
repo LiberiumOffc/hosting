@@ -1,90 +1,103 @@
+import os
 import socket
 import threading
 import time
 
-# Словарь для хранения статусов портов
-ports_status = {}
+ports = {}
 
-def start_port(port):
-    """Запускает сервер на указанном порту"""
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def start_port(port, name):
     def run_server():
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             server.bind(('0.0.0.0', port))
             server.listen(5)
-            ports_status[port] = "🟢 ONLINE (слушает)"
-            print(f"\n[+] Порт {port} открыт и слушает клиентов")
+            ports[port]["status"] = "🟢 ONLINE"
+            print(f"\n[+] Порт {port} открыт как '{name}'")
 
-            while ports_status.get(port) == "🟢 ONLINE (слушает)":
+            while ports[port]["status"] == "🟢 ONLINE":
                 server.settimeout(2)
                 try:
                     client, addr = server.accept()
-                    print(f"[!] Подключение на порт {port} от {addr}")
-                    client.send(b"RAT Connection Established\n")
+                    print(f"[!] Подключение к {name} ({port}) от {addr}")
+                    client.send(f"Добро пожаловать в RAT {name}\n".encode())
                     client.close()
                 except socket.timeout:
                     continue
                 except:
                     break
         except Exception as e:
-            ports_status[port] = f"🔴 ОШИБКА: {e}"
+            ports[port]["status"] = f"🔴 ОШИБКА"
         finally:
             server.close()
+            if port in ports:
+                ports[port]["status"] = "🔴 OFFLINE"
 
-    if port not in ports_status or "OFFLINE" in ports_status[port] or "ОШИБКА" in ports_status[port]:
+    if port not in ports:
+        ports[port] = {"name": name, "status": "🟡 ЗАПУСК..."}
         thread = threading.Thread(target=run_server, daemon=True)
         thread.start()
         time.sleep(1)
-        if port not in ports_status:
-            ports_status[port] = "🟢 ONLINE (слушает)"
     else:
-        print(f"Порт {port} уже запущен.")
+        print(f"Порт {port} уже существует.")
 
 def stop_port(port):
-    """Останавливает порт (помечает как офлайн)"""
-    if port in ports_status and "ONLINE" in ports_status[port]:
-        ports_status[port] = "🔴 OFFLINE (остановлен)"
-        print(f"[-] Порт {port} остановлен.")
+    if port in ports:
+        ports[port]["status"] = "🔴 OFFLINE"
+        print(f"[-] Порт {port} закрыт.")
     else:
-        print(f"Порт {port} не активен.")
+        print("Порт не найден.")
 
-def show_status():
-    print("\n--- СТАТУС ПОРТОВ ---")
-    if not ports_status:
-        print("Нет активных портов.")
-    for port, status in ports_status.items():
-        print(f"Порт {port}: {status}")
+def show_menu():
+    clear_screen()
+    print("=== RAT PORT MANAGER ===\n")
+    print("Список портов:")
+    if not ports:
+        print("  Пусто. Создай первый порт.")
+    else:
+        for p, data in ports.items():
+            print(f"  {data['status']} [{data['name']}] → {p}")
+    print("\nКоманды:")
+    print("  1. Создать порт")
+    print("  2. Закрыть порт")
+    print("  3. Обновить статусы")
+    print("  0. Выход")
 
 def main():
-    print("=== RAT PORT MANAGER ===")
-    print("Создавай порты для RAT и смотри статус 🟢🔴")
     while True:
-        print("\n1. Открыть порт")
-        print("2. Закрыть порт")
-        print("3. Показать статусы")
-        print("0. Выход")
-        choice = input("Выбери: ")
+        show_menu()
+        cmd = input("\nВыбери команду: ").strip()
 
-        if choice == "1":
+        if cmd == "1":
             try:
-                port = int(input("Введи порт для открытия: "))
-                start_port(port)
+                port = int(input("  Введи номер порта: "))
+                name = input("  Введи имя для порта: ")
+                start_port(port, name)
             except:
-                print("Ошибка ввода порта.")
-        elif choice == "2":
+                print("  Ошибка ввода.")
+            input("  Нажми Enter...")
+
+        elif cmd == "2":
             try:
-                port = int(input("Введи порт для закрытия: "))
+                port = int(input("  Введи номер порта для закрытия: "))
                 stop_port(port)
             except:
-                print("Ошибка ввода.")
-        elif choice == "3":
-            show_status()
-        elif choice == "0":
+                print("  Ошибка ввода.")
+            input("  Нажми Enter...")
+
+        elif cmd == "3":
+            continue
+
+        elif cmd == "0":
             print("Выход.")
             break
+
         else:
-            print("Неверный выбор.")
+            print("Неверная команда.")
+            input("Нажми Enter...")
 
 if __name__ == "__main__":
     main()
