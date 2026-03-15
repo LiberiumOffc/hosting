@@ -8,16 +8,6 @@ ports = {}
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return "127.0.0.1"
-
 def start_port(port, name):
     def run_server():
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,14 +17,14 @@ def start_port(port, name):
             server.listen(5)
             ports[port]["status"] = "🟢 ONLINE"
             print(f"\n[+] Порт {port} открыт как '{name}'")
-            print(f"[+] Ссылка: rat://{get_local_ip()}:{port}")
+            print(f"[+] ХОСТ: 0.0.0.0:{port}")
 
             while ports[port]["status"] == "🟢 ONLINE":
                 server.settimeout(2)
                 try:
                     client, addr = server.accept()
                     print(f"[!] Подключение к {name} ({port}) от {addr}")
-                    client.send(f"Добро пожаловать в RAT {name}\n".encode())
+                    client.send(f"RAT {name}\n".encode())
                     client.close()
                 except socket.timeout:
                     continue
@@ -64,14 +54,13 @@ def stop_port(port):
 
 def show_menu():
     clear_screen()
-    ip = get_local_ip()
     print("=== RAT PORT MANAGER ===\n")
-    print("Список портов (ссылки для подключения):")
+    print("Список портов (0.0.0.0:порт):")
     if not ports:
         print("  Пусто. Создай первый порт.")
     else:
         for p, data in ports.items():
-            print(f"  {data['status']} [{data['name']}] → rat://{ip}:{p}")
+            print(f"  {data['status']} [{data['name']}] → 0.0.0.0:{p}")
     print("\nКоманды:")
     print("  1. Создать порт")
     print("  2. Закрыть порт")
